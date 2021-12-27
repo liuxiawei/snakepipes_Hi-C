@@ -15,7 +15,10 @@
 */.DS_Store
 */.Trash/
 # snakemake configure
+.snakemake/
+.snakemake/*
 */.snakemake/
+*/.snakemake/*
 # HEXO public
 /public/
 /.deploy_git/
