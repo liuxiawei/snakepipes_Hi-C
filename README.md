@@ -16,7 +16,7 @@
         - [[2] call TAD](#2-call-tad)
         - [[3] call Loops](#3-call-loops)
         - [[4] call compartments](#4call-compartments)
-    - [helps](#helps)
+    - [Helps](#helps)
         - [北京大学北极星slurm系统设置](#北京大学北极星slurm系统设置)
         - [config file template](#config-file-template-step01_config-hicprotxt)
 ---
@@ -211,7 +211,7 @@ hicPCA -m hic_corrected.h5 --outFileName pca1.bw pca2.bw --format bigwig --pears
 
 hicPlotMatrix -m pearson.h5 --outFileName pca1.png --perChr --bigwig pca1.bw
 
-## helps
+## Helps
 ### 北京大学北极星slurm系统设置
 软件目录script下的make_slurm_script.sh需要修改
 【直接复制】
