@@ -15,7 +15,7 @@
         - [[1] run mapping](#1-run-mapping)
         - [[2] call TAD](#2-call-tad)
         - [[3] call Loops](#3-call-loops)
-        - [[4]call compartments](#4call-compartments)
+        - [[4] call compartments](#4call-compartments)
     - [helps](#helps)
         - [北京大学北极星slurm系统设置](#北京大学北极星slurm系统设置)
         - [config file template](#config-file-template-step01_config-hicprotxt)
