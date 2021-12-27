@@ -3,7 +3,10 @@
 /logs/
 /tmp/
 # jupyterlab meta
+.ipynb_checkpoints/
+.ipynb_checkpoints/*
 */.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
 # pycharm meta
 */.idea/
 # Rstudio history
