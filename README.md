@@ -1,5 +1,10 @@
 # snakepipes_Hi-C
-## envs
+---
+**TOC**
+- [snakepipes_Hi-C](# snakepipes_Hi-C)
+---
+## Settings
+### envs
 ```shell
 # https://github.com/nservant/HiC-Pro
 wget https://raw.githubusercontent.com/nservant/HiC-Pro/master/environment.yml
@@ -7,7 +12,7 @@ mamba env create -f environment.yml
 conda activate HiC-Pro_v3.1.0
 ```
 
-## install Hi-C Pro
+### install Hi-C Pro
 ```shell
 tar -zxvf HiC-Pro-master.tar.gz
 cd HiC-Pro-master
@@ -18,7 +23,7 @@ make install
 
 # add to PATH
 ```
-## install juicer
+### install juicer
 ```shell
 git clone https://github.com/theaidenlab/juicer.git /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/juicer
 cd /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/juicer/SLURM/scripts
@@ -27,30 +32,30 @@ ln -s juicer_tools.1.9.9_jcuda.0.8.jar  juicer_tools.jar
 
 # add to PATH
 ```
-## install hicexplorer
+### install hicexplorer
 ```shell
 mamba install hicexplorer
 ```
 
-## enzyme cut map
+### enzyme cut map
 ```shell
 python /lustre1/chengqiyi_pkuhpc/zhaohn/0.apps/HiC-Pro_installed/HiC-Pro_3.1.0/bin/utils/digest_genome.py \
     -r hindiii \
     -o hg38_hindiii.bed \
     /lustre1/chengqiyi_pkuhpc/zhaohn/1.database/db_genomes/genome_fa/genome_ucsc_hg38/genome_ucsc_hg38.fa
 ```
-## genome size
+### genome size
 ```shell
 samtools faidx /lustre1/chengqiyi_pkuhpc/zhaohn/1.database/db_genomes/genome_fa/genome_ucsc_hg38/genome_ucsc_hg38.fa
 
 cut -f1-2 /lustre1/chengqiyi_pkuhpc/zhaohn/1.database/db_genomes/genome_fa/genome_ucsc_hg38/genome_ucsc_hg38.fa.fai > chrom_hg38.sizes
 ```
-## download test files
+### download test files
 ```shell
 wget  https://zerkalo.curie.fr/partage/HiC-Pro/HiCPro_testdata.tar.gz && tar -zxvf HiCPro_testdata.tar.gz
 ```
 
-## files
+### files
 ```text
 ./
 ├── fastq
@@ -64,7 +69,9 @@ wget  https://zerkalo.curie.fr/partage/HiC-Pro/HiCPro_testdata.tar.gz && tar -zx
     └── ...
 
 ```
-## run mapping
+---
+## Running
+### [1] run mapping
 ```shell
 ########
 # local
@@ -84,7 +91,7 @@ tail -f ../out_dir/slurm-*
 cd ../out_dir/ && sbatch HiCPro_step2_zHiC.sh && cd -
 tail -f ../out_dir/slurm-*
 ```
-## call TAD [HiC Explorer / TopDom]
+### [2] call TAD [HiC Explorer / TopDom] overlap
 重点参考了这个攻略：https://blog.csdn.net/hzau_yang/article/details/100031590
 
 convert hicpro to h5
@@ -134,14 +141,14 @@ hicFindTADs -m hic_corrected.h5 --outPrefix hic_corrected --numberOfProcessors 1
 
 
 
-## call Loops
+### [3] call Loops overlap
 ```shell
 # Convert ValidPairs to Juicer .hic
 ~/0.apps/HiC-Pro_installed/HiC-Pro_3.1.0/bin/utils/hicpro2juicebox.sh -i dixon_2M.allValidPairs -g ~/0.apps/HiC-Pro_installed/HiC-Pro_3.1.0/annotation/chrom_hg38.sizes -j ~/0.apps/juicerbox/juicer_tools.jar -r ~/0.apps/HiC-Pro_installed/HiC-Pro_3.1.0/annotation/HindIII_resfrag_hg38.bed
 ```
 
 
-# call loop [juicer]
+call loop [juicer]
 https://github.com/aidenlab/juicer
 
 http://www.360doc.com/content/19/1224/14/68068867_881786243.shtml
@@ -157,7 +164,7 @@ Creating .hic with Pre
 Extracting data from .hic files with dump
 To launch the command line tools, use the shell script “juicer_tools” on Unix/MacOS or type
 
-java -jar juicer_tools.jar (command...) [flags...] <parameters...>`
+java -jar juicer_tools.jar (command...) [flags...] <parameters...>
 There are different flavors of juicer_tools that depend on the CUDA version. If you do not use GPUs, these versions are equivalent. Otherwise, juicer_tools.X.X.jar uses CUDA version X.X
 
 For HiCCUPS loop calling without the shell or bat script, you will need to call: java -Xms512m -Xmx2048m -Djava.library.path=path/to/natives/ -jar juicer_tools.jar hiccups [flags...] <parameters...> where path/to/natives is the path to the native libraries used for Jcuda By default, these are located in the lib/jcuda folder.
@@ -172,10 +179,7 @@ eigenvector for calculating the eigenvector (first PC) of the Pearson's
 pearsons for calculating the Pearson's
 The juicer_tools (Unix/MacOS) script can be used in place of the unwieldy java -Djava.library.path=path/to/natives/ -jar juicer_tools.jar
 ```
-
-
-
-# call compartments
+### [4]call compartments
 
 5.找compartment
 
@@ -188,21 +192,9 @@ hicPCA -m hic_corrected.h5 --outFileName pca1.bw pca2.bw --format bigwig --pears
 
 hicPlotMatrix -m pearson.h5 --outFileName pca1.png --perChr --bigwig pca1.bw
 
-
-
-
-
-
-
-
-
-
-
-
-## others
+## helps
 ### 北京大学北极星slurm系统需要改动
-# 软件目录script下的make_slurm_script.sh需要修改
-
+软件目录script下的make_slurm_script.sh需要修改
 【直接复制】
 
 ```shell
@@ -343,10 +335,8 @@ EOF
     echo sbatch ${torque_script_s2}
 fi
 ```
-
-
-
 ### config file template [./step01_config-hicpro.txt]
+配置Hi-C Pro的模板
 ```shell
 # Copy and edit the configuration file ‘config-hicpro.txt’ in your local folder. 
 # The ‘[]’ options are optional and can be undefined. 带有[]中括号的参数可以不定义，为可选参数

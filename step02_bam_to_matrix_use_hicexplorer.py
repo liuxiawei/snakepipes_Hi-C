@@ -35,7 +35,7 @@ rule bam2h5:
             --binSize {params.bins} \
             --threads {THREADS} \
             --inputBufferSize 400000 \
-            # --doTestRun
+            --doTestRun
             
         """
 
