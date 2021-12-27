@@ -1,7 +1,7 @@
 # snakepipes_Hi-C
 ---
 **TOC**
-- [snakepipes_Hi-C](# snakepipes_Hi-C)
+- [snakepipes_Hi-C](#snakepipes_Hi-C)
 ---
 ## Settings
 ### envs
