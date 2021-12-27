@@ -198,7 +198,7 @@ eigenvector for calculating the eigenvector (first PC) of the Pearson's
 pearsons for calculating the Pearson's
 The juicer_tools (Unix/MacOS) script can be used in place of the unwieldy java -Djava.library.path=path/to/natives/ -jar juicer_tools.jar
 ```
-### [4]call compartments
+### [4] call compartments
 
 5.找compartment
 
