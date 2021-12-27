@@ -2,6 +2,24 @@
 ---
 **TOC**
 - [snakepipes_Hi-C](#snakepipes_Hi-C)
+    - [Settings](#Settings)
+        - [envs](#envs)
+        - [install Hi-C Pro](#install Hi-C Pro)
+        - [install juicer](#install juicer)
+        - [install hicexplorer](#install hicexplorer)
+        - [enzyme cut map](#enzyme cut map)
+        - [genome size](#genome size)
+        - [download test files](#download test files)
+        - [file tree](#file tree)
+    - [Running](#Running)
+        - [[1] run mapping](#[1] run mapping)
+        - [[2] call TAD](#[2] call TAD)
+        - [[3] call Loops](#[3] call Loops)
+        - [[4]call compartments](#[4]call compartments)
+    - [helps](#helps)
+        - [北京大学北极星slurm系统设置](#北京大学北极星slurm系统设置)
+        
+        
 ---
 ## Settings
 ### envs
@@ -55,7 +73,7 @@ cut -f1-2 /lustre1/chengqiyi_pkuhpc/zhaohn/1.database/db_genomes/genome_fa/genom
 wget  https://zerkalo.curie.fr/partage/HiC-Pro/HiCPro_testdata.tar.gz && tar -zxvf HiCPro_testdata.tar.gz
 ```
 
-### files
+### file tree
 ```text
 ./
 ├── fastq
@@ -91,7 +109,8 @@ tail -f ../out_dir/slurm-*
 cd ../out_dir/ && sbatch HiCPro_step2_zHiC.sh && cd -
 tail -f ../out_dir/slurm-*
 ```
-### [2] call TAD [HiC Explorer / TopDom] overlap
+### [2] call TAD
+HiC Explorer / TopDom overlap
 重点参考了这个攻略：https://blog.csdn.net/hzau_yang/article/details/100031590
 
 convert hicpro to h5
@@ -141,7 +160,8 @@ hicFindTADs -m hic_corrected.h5 --outPrefix hic_corrected --numberOfProcessors 1
 
 
 
-### [3] call Loops overlap
+### [3] call Loops
+overlap
 ```shell
 # Convert ValidPairs to Juicer .hic
 ~/0.apps/HiC-Pro_installed/HiC-Pro_3.1.0/bin/utils/hicpro2juicebox.sh -i dixon_2M.allValidPairs -g ~/0.apps/HiC-Pro_installed/HiC-Pro_3.1.0/annotation/chrom_hg38.sizes -j ~/0.apps/juicerbox/juicer_tools.jar -r ~/0.apps/HiC-Pro_installed/HiC-Pro_3.1.0/annotation/HindIII_resfrag_hg38.bed
@@ -193,7 +213,7 @@ hicPCA -m hic_corrected.h5 --outFileName pca1.bw pca2.bw --format bigwig --pears
 hicPlotMatrix -m pearson.h5 --outFileName pca1.png --perChr --bigwig pca1.bw
 
 ## helps
-### 北京大学北极星slurm系统需要改动
+### 北京大学北极星slurm系统设置
 软件目录script下的make_slurm_script.sh需要修改
 【直接复制】
 
