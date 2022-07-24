@@ -1,4 +1,6 @@
 # snakepipes_Hi-C
+**须知**：本仓库还在构建中，暂时只作参考！！
+
 ---
 **TOC**
 - [snakepipes_Hi-C](#snakepipes_Hi-C)
