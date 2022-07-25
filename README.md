@@ -29,6 +29,17 @@
 wget https://raw.githubusercontent.com/nservant/HiC-Pro/master/environment.yml
 mamba env create -f environment.yml
 conda activate HiC-Pro_v3.1.0
+
+# 2022-07-25
+# bowtie 2.4.5
+# samtools 1.15.1 Using htslib 1.15.1
+# assert check_cmd("bowtie2")  # Bowtie 2 version 2.4.5
+# assert check_cmd("samtools")  # samtools 1.15.1 Using htslib 1.15.1
+# pip install iced                           
+# Collecting iced
+#   Downloading iced-0.5.10.tar.gz (2.3 MB)
+# manually set cmd path
+
 ```
 
 ### install Hi-C Pro
