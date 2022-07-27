@@ -6,7 +6,8 @@
 ---
 ## 环境
 ```shell
-conda install python r-base bowtie2 samtools iced r-ggplot2 r-rcolorbrewer 
+conda install python r-base bowtie2 samtools iced r-ggplot2 r-rcolorbrewer
+conda install -c bioconda java-jdk hicexplorer
 
 # 我用的版本
 # python=3.9.13
@@ -14,6 +15,8 @@ conda install python r-base bowtie2 samtools iced r-ggplot2 r-rcolorbrewer
 # bowtie2=2.4.5
 # samtools=1.15.1
 # iced=0.5.10
+# java-jdk=1.8 # java openjdk version "1.8.0_312"
+# hicexplorer=3.7.2
 ```
 
 ## 用法

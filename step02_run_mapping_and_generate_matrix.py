@@ -55,6 +55,8 @@ MIN_MAPQ = dt['min_mapq']
 BIN_SIZES = dt['bin_sizes']
 CHR_SIZES = dt['chr_sizes']
 DIGEST_BED = dt['digest_bed']
+RESTRICTION = dt['restriction_sequence']
+DANGLING = dt['dangling_sequence']
 # ------------------------------------------------------------------->>>>>>>>>>
 # DATABASE INFO
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -65,13 +67,20 @@ BOWTIE2_INDEX = dt["bowtie2_index"]
 # check if cmd exists
 assert check_cmd("bowtie2")  # Bowtie 2 version 2.4.5
 assert check_cmd("samtools")  # samtools 1.15.1 Using htslib 1.15.1
+assert check_cmd("java")  # openjdk version 1.8.0_312
+assert check_cmd("hicBuildMatrix") # hicexplorer=3.7.2
+assert check_cmd("hicCorrectMatrix") # hicexplorer=3.7.2
+assert check_cmd("hicConvertFormat") # hicexplorer=3.7.2
 # pip install iced                           
 # Collecting iced
 #   Downloading iced-0.5.10.tar.gz (2.3 MB)
 # manually set cmd path
 BOWTIE2 = "bowtie2"
 SAMTOOLS = "samtools"
-
+JAVA = "java"
+hicBuildMatrix = "hicBuildMatrix"
+hicCorrectMatrix = "hicCorrectMatrix"
+hicConvertFormat = "hicConvertFormat"
 
 
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -92,6 +101,8 @@ rule all:
         expand("../quality_checks/plotHiCFragment_{sample}.pdf", sample=SAMPLES),
         expand("../quality_checks/plotHiCContactRanges_{sample}.pdf", sample=SAMPLES),
         expand("../hic_file/{sample}.rm_dup_pairs.allValidPairs.hic", sample=SAMPLES),
+        expand("../matrix/{bin_size}/{sample}_{bin_size}_RawMatrix.h5", sample=SAMPLES, bin_size=BIN_SIZES),
+        expand("../matrix/{bin_size}/{sample}_{bin_size}_KRjustify_Matrix.h5", sample=SAMPLES, bin_size=BIN_SIZES),
 # ------------------------------------------------------------------->>>>>>>>>>
 # mapping_global
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -606,6 +617,9 @@ rule quality_checks:
         #    [-t|--temp] TEMP : path to tmp folder. Default is current path
         #    [-o|--out] OUT : output path. Default is current path
         #    [-h|--help]: help
+
+        # java -Xms16g -Xmx16g -Xmn8g -jar program/juicer_tools_1.22.01.jar pre -h
+        # 如遇问题看一下这个 ![](https://tva1.sinaimg.cn/large/e6c9d24ely1h4lxwl997zj20nc0eztbi.jpg)
 # ------------------------------------------------------------------->>>>>>>>>>
 rule valid_pairs_to_hic:
     input:
@@ -622,11 +636,227 @@ rule valid_pairs_to_hic:
         mkdir -p {params.temp_path}
         echo "[DEBUG] start valid pairs convertion to hic file ..." > {log}
         program/HiC-Pro_3.1.0/bin/utils/hicpro2juicebox.sh \
-        -i {input.vp_rmdup} \
-        -g {CHR_SIZES} \
-        -j program/juicer_tools_1.22.01.jar \
-        -r {DIGEST_BED} \
-        -t {params.temp_path} \
-        -o {params.hic_dir} >> {log} 2&>1
+            -i {input.vp_rmdup} \
+            -g {CHR_SIZES} \
+            -j program/juicer_tools_1.22.01.jar \
+            -r {DIGEST_BED} \
+            -t {params.temp_path} \
+            -o {params.hic_dir} >> {log} 2&>1
         echo "[DEBUG] valid pairs convertion to hic file done" >> {log}
         """
+# ------------------------------------------------------------------->>>>>>>>>>
+# make hicexplorer matrix
+        # hicBuildMatrix -h
+        # usage: hicBuildMatrix --samFiles two sam files two sam files --outFileName
+        #                       FILENAME --QCfolder FOLDER --restrictionCutFile BED file
+        #                       [BED file ...] --restrictionSequence RESTRICTIONSEQUENCE
+        #                       [RESTRICTIONSEQUENCE ...] --danglingSequence
+        #                       DANGLINGSEQUENCE [DANGLINGSEQUENCE ...]
+        #                       [--outBam bam file] [--binSize BINSIZE [BINSIZE ...]]
+        #                       [--minDistance MINDISTANCE] [--maxDistance MAXDISTANCE]
+        #                       [--maxLibraryInsertSize MAXLIBRARYINSERTSIZE]
+        #                       [--genomeAssembly GENOMEASSEMBLY]
+        #                       [--region CHR:START-END] [--keepSelfLigation]
+        #                       [--keepSelfCircles]
+        #                       [--minMappingQuality MINMAPPINGQUALITY]
+        #                       [--threads THREADS] [--inputBufferSize INPUTBUFFERSIZE]
+        #                       [--doTestRun] [--doTestRunLines DOTESTRUNLINES]
+        #                       [--skipDuplicationCheck] [--chromosomeSizes txt file]
+        #                       [--help] [--version]
+        # need about 150GB memory 
+# ------------------------------------------------------------------->>>>>>>>>>
+# rule build_hicexplorer_matrix:
+#     input:
+#         bam_f="../bam/{sample}/{sample}_R1.merged_sortn.bam",
+#         bam_r="../bam/{sample}/{sample}_R2.merged_sortn.bam"
+#     output:
+#         "../hdf5_files/{sample}_RawMatrix.h5"
+#     params:
+#         # bins="20000 40000 100000 200000 500000 1000000"
+#         bins=" ".join([str(bin) for bin in BIN_SIZES]),
+#         qc_dir="../quality_checks_by_hicexplorer"
+#     log:
+#         "../hdf5_files/{sample}_RawMatrix.log"
+#     shell:
+#         """
+#         mkdir -p {params.qc_dir}
+#         echo "[DEBUG] start to build raw matrix.hdf5 file ..." > {log}
+#         {hicBuildMatrix} --samFiles {input.bam_f} {input.bam_r} \
+#             --outFileName {output} \
+#             --binSize {params.bins} \
+#             --threads {THREAD} \
+#             --QCfolder {params.qc_dir} \
+#             --restrictionCutFile {DIGEST_BED} \
+#             --restrictionSequence {RESTRICTION} \
+#             --danglingSequence {DANGLING} \
+#             --minMappingQuality 20 \
+#             --chromosomeSizes {CHR_SIZES} >> {log} 2&>1
+#         echo "[DEBUG] build raw matrix.hdf5 file done" >> {log}
+#         """
+rule valid_pairs_to_hdf5:
+    input:
+        matrix="../matrix/{bin_size}/{sample}_{bin_size}_raw.matrix",
+        bed="../matrix/{bin_size}/{sample}_{bin_size}_raw_abs.bed"
+    output:
+        "../matrix/{bin_size}/{sample}_{bin_size}_RawMatrix.h5"
+    params:
+        bin_size="{bin_size}"
+    log:
+        "../matrix/{bin_size}/{sample}_{bin_size}_RawMatrix.log"
+    shell:
+        """
+        echo "[DEBUG] start to build raw matrix.hdf5 file ..." > {log}
+        export HDF5_USE_FILE_LOCKING='FALSE' # for [locking disabled on this file system] err
+        {hicConvertFormat} \
+            -m {input.matrix} \
+            --bedFileHicpro {input.bed} \
+            --inputFormat hicpro \
+            --outputFormat h5 -o {output} \
+            --resolutions {params.bin_size} >> {log} 2&>1
+        echo "[DEBUG] build raw matrix.hdf5 file done" >> {log}
+        
+        
+
+        """
+rule hdf5_matrix_correction:
+    input:
+        "../matrix/{bin_size}/{sample}_{bin_size}_RawMatrix.h5"
+    output:
+        "../matrix/{bin_size}/{sample}_{bin_size}_KRjustify_Matrix.h5"
+    log:
+        "../matrix/{bin_size}/{sample}_{bin_size}_KRjustify_Matrix.log"
+    shell:
+        """
+        echo "[DEBUG] start to justify matrix ..." > {log}
+        export HDF5_USE_FILE_LOCKING='FALSE' # for [locking disabled on this file system] err
+        {hicCorrectMatrix} correct \
+            -m {input} \
+            --correctionMethod KR \
+            -o {output} >> {log} 2>&1
+        echo "[DEBUG] justify matrix done" >> {log}
+        """
+# call TAD
+# srun -T 24 hicFindTADs \
+# -m 293T_WT.KR.CorrectMatrix.25Kbp.h5 \
+# --outPrefix 293T_WT.KR.25Kbp \
+# --numberOfProcessors 24 \
+# --correctForMultipleTesting fdr > 293T_WT.hicFindTADs.25Kbp.log 2>&1 &  
+
+# # plot 
+# hicPlotTADs --tracks 20211101-DdCBE_plot_TAD.ini -o out_image/test.pdf --region chrX:60000000-80000000 &
+# hicPlotTADs --tracks 20211101-DdCBE_plot_TAD.ini -o out_image/test_2.pdf --region chrX:60000000-80000000 &
+# hicPlotTADs --tracks 20211101-DdCBE_plot_TAD.ini -o out_image/test_3.pdf --region chrX:60000000-80000000 &
+
+
+# call loops 
+# cd /home/menghaowei/menghw_HD/DdCBE_project/10.hic_data/01.hicpro_WT/hic_results/data/293T_WT
+
+# java -Xmx32g -jar /home/menghaowei/menghw_HD/software_package/juicer/juicer_tools_1.22.01.jar hiccups \
+# --threads 10 \
+# -r 25000,10000,5000 \
+# -k KR \
+# -f 0.1,0.1,0.1 \
+# -p 1,2,4 \
+# -d 20000,20000,20000 \
+# test.allValidPairs.hic \
+
+
+# java -Xmx64g -jar /home/menghaowei/menghw_HD/software_package/juicer/juicer_tools_1.22.01.jar hiccups \
+# --threads 20 \
+# -r 5000,10000,25000 \
+# -c chr1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X \
+# --ignore-sparsity \
+# 293T_WT.allValidPairs.NoFrag.hic all_hiccups_loops.NoFrag.hic
+
+
+# java -Xmx64g -jar /home/menghaowei/menghw_HD/software_package/juicer/juicer_tools_1.22.01.jar hiccups \
+# --threads 20 \
+# -r 5000,10000,25000 \
+# -c chr1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X \
+# --ignore-sparsity \
+# 293T_WT.allValidPairs.hic all_hiccups_loops 
+
+# # extract data 
+# java -Xmx32g -jar /home/menghaowei/menghw_HD/software_package/juicer/juicer_tools_1.22.01.jar dump \
+# observed KR 293T_WT.allValidPairs.NoFrag.hic chr1 chr1 BP 100000 test.txt 
+	
+
+# # java -Xmx32g -jar /home/menghaowei/menghw_HD/software_package/juicer/juicer_tools_1.22.01.jar hiccups \
+# # -r 5000 -c chr1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X --ignore-sparsity \
+# # 293T_WT.allValidPairs.NoFrag.hic all_hiccups_loops
+
+# # # on Lab iMac
+# # java -Xmx32g -jar /Users/meng/juicer_tools_1.22.01.jar hiccups \
+# # -r 5000,10000,25000 -c chr1,2,3,4,5,6,7,8,9,10 293T_WT.allValidPairs.hic all_hiccups_loops
+
+
+# # cuda install 
+# https://developer.nvidia.com/cuda-10.2-download-archive?target_os=MacOSX&target_arch=x86_64&target_version=1013&target_type=dmglocal
+
+
+
+#### call TAD
+# hicFindTADs -m 293T_WT.KRCorrectMatrix.h5 --outPrefix 293T_WT.KR --numberOfProcessors 16 --correctForMultipleTesting fdr > 293T_WT.hicFindTADs.log 2>&1 &  
+# find TAD 
+# srun -T 24 hicFindTADs -m 293T_WT.KR.CorrectMatrix.25Kbp.h5 --outPrefix 293T_WT.KR.25Kbp --numberOfProcessors 24 --correctForMultipleTesting fdr > 293T_WT.hicFindTADs.25Kbp.log 2>&1 &  
+
+# srun -T 24 hicFindTADs -m 293T_WT.KR.CorrectMatrix.50Kbp.h5 --outPrefix 293T_WT.KR.50Kbp --numberOfProcessors 24 --correctForMultipleTesting fdr > 293T_WT.KR.hicFindTADs.50Kbp.log 2>&1 &  
+
+# srun -T 24 hicFindTADs -m 293T_WT.ICE.CorrectMatrix.50Kbp.h5 --outPrefix 293T_WT.ICE.50Kbp --numberOfProcessors 24 --correctForMultipleTesting fdr > 293T_WT.hicFindTADs.50Kbp.log 2>&1 &  
+
+# hicPlotTADs --tracks plot_TAD.DdCBEOnly.ini -o out_image/293T_WT.KR.BinSize5Kbp.chr12_96M_126M.DdCBEOnly.pdf --region chr12:96000000-126000000 &
+
+# hicPlotTADs --tracks plot_TAD.DdCBEOnly.25Kbp.ini -o out_image/293T_WT.KR.BinSize25Kbp.chr12_96M_126M.DdCBEOnly.pdf --region chr12:96000000-126000000 &
+
+# hicPlotTADs --tracks plot_TAD.DdCBEOnly.25Kbp.ini -o out_image/293T_WT.KR.BinSize25Kbp.chr12_96M_116M.DdCBEOnly.pdf --region chr12:96000000-116000000 &
+
+# hicPlotTADs --tracks plot_TAD.Reds.DdCBEOnly.25Kbp.ini -o out_image/293T_WT.KR.BinSize25Kbp.chr12_96M_126M.DdCBEOnly.Reds.pdf --region chr12:96000000-126000000 &
+
+# hicPlotTADs --tracks plot_TAD.DdCBEOnly.25Kbp.ini -o out_image/293T_WT.KR.BinSize25Kbp.chr12_10M_130M.DdCBEOnly.pdf --region chr12:10000000-130000000 &
+
+
+# # plot TAD score 
+# sort -k1,1 -k2,2n 293T_WT.KR_score.bedgraph > 293T_WT.KR_score.sort.bedgraph &
+
+# sort -k1,1 -k2,2n 293T_WT.KR.25Kbp_score.bedgraph > 293T_WT.KR.25Kbp_score.sort.bedgraph &
+
+# # bedgraph to bigwig
+# bedGraphToBigWig 293T_WT.KR_score.sort.bedgraph ~/menghw_HD/reference/hg38.only_chrom.sizes 293T_WT.KR_score.bigwig &
+
+# bedGraphToBigWig 293T_WT.KR.25Kbp_score.sort.bedgraph ~/menghw_HD/reference/hg38.only_chrom.sizes 293T_WT.KR.25Kbp_score.bigwig &
+
+# # region in /home/menghaowei/menghw_HD/DdCBE_project/08.DdCBE_merge_all/region_cor_analysis/peak_region
+
+# # plot TAD
+# cd /home/menghaowei/menghw_HD/DdCBE_project/10.hic_data/01.hicpro_WT/hicexp_result
+
+# computeMatrix reference-point -S \
+# ~/menghw_HD/DdCBE_project/10.hic_data/01.hicpro_WT/hicexp_result/01.TAD_info/293T_WT.KR.25Kbp_score.bigwig \
+# ~/menghw_HD/DdCBE_project/10.hic_data/01.hicpro_WT/hicexp_result/01.TAD_info/293T_WT.KR_score.bigwig \
+# -R \
+# ~/menghw_HD/DdCBE_project/08.DdCBE_merge_all/region_cor_analysis/peak_region/20210312-Motif-ND6-DepSite.merge.bed \
+# ~/menghw_HD/DdCBE_project/08.DdCBE_merge_all/region_cor_analysis/peak_region/20210312-Motif-ND6-Indep.merge.bed \
+# ~/menghw_HD/DdCBE_project/08.DdCBE_merge_all/region_cor_analysis/peak_region/20210319-hg38_random.50bp.sort.bed \
+# --referencePoint center \
+# --beforeRegionStartLength 2000000 \
+# --afterRegionStartLength 2000000 \
+# --skipZeros \
+# --binSize 25000 \
+# -o deeptools_result/20210421-TAD_score.profile.mat.gz \
+# --samplesLabel  TAD.25Kbp  TAD.5Kbp \
+# --numberOfProcessors 10 & 
+
+# # plot
+# plotHeatmap -m deeptools_result/20210421-TAD_score.profile.mat.gz \
+# --colorMap Purples \
+# -out deeptools_result/20210421-TAD_score.profile.heatmap.pdf &
+
+# # count site in TAD boundary
+# Dep 3 / 72
+# Indep 51 / 417 
+# Random 16 / 500
+
+# # count site in TAD boundary +- 1 pixel
+# Dep 8 / 72
+# Indep 134 / 417 
+# Random 58 / 500
