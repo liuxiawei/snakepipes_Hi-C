@@ -22,7 +22,8 @@ conda install python r-base bowtie2 samtools iced r-ggplot2 r-rcolorbrewer
 使用 [snakepipes_fastqc-multiqc](https://github.com/hermanzhaozzzz/snakepipes_fastqc-multiqc)进行质量控制
 
 ### step 1 运行Snakemake Pipeline，生成Hi-C contact matrix
-**回贴Hi-C reads以及生成RAW矩阵ICE校正矩阵**
+- **回贴Hi-C reads以及生成RAW矩阵ICE校正矩阵**
+- **validPairs convert to .hic file(Juicer)**
 
 ```shell
 cd HiC
@@ -44,6 +45,7 @@ snakemake -pr -j 8 -s step02_run_mapping_and_generate_matrix.py -n
 # .
 # ├── bam
 # ├── fastq
+# ├── hic_file
 # ├── matrix
 # ├── qc
 # ├── quality_checks
@@ -52,5 +54,4 @@ snakemake -pr -j 8 -s step02_run_mapping_and_generate_matrix.py -n
 # ├── temp_files
 # └── valid_pairs
 ```
-### step 2
-test
+### step 2 Convert ValidPairs to Juicer .hic¶
