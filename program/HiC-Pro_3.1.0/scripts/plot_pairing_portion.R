@@ -126,7 +126,9 @@ plotPairStat <- function(mat, xlab="", legend=TRUE){
 ####################################
 
 ## Get HiC stat files for all fastq files of a given sample
-allpairstat <- list.files(path=bwtDir, pattern=paste0("^[[:print:]]*\\.pairstat$"), full.names=TRUE)
+# allpairstat <- list.files(path=bwtDir, pattern=paste0("^[[:print:]]*\\.pairstat$"), full.names=TRUE)
+# 2022-07-27
+allpairstat <- list.files(path=bwtDir, pattern=paste0(sampleName, ".merged_sortn.bwt2pairs.pairstat"), full.names=TRUE)
 stopifnot(length(allpairstat)>0)
 
 ## Get statistics summary

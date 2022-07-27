@@ -132,8 +132,11 @@ ploMapStat <- function(mat, sampleName="", tag="", legend=TRUE){
 ##
 ####################################
 ## Get Mapping stat files for all fastq files of a given sample
-allmapstat_r1 <- list.files(path=bwtDir, pattern=paste0("^[[:print:]]*",r1tag,"[[:print:]]*\\.mapstat$"), full.names=TRUE)
-allmapstat_r2 <- list.files(path=bwtDir, pattern=paste0("^[[:print:]]*",r2tag,"[[:print:]]*\\.mapstat$"), full.names=TRUE)
+# allmapstat_r1 <- list.files(path=bwtDir, pattern=paste0("^[[:print:]]*",r1tag,"[[:print:]]*\\.mapstat$"), full.names=TRUE)
+# allmapstat_r2 <- list.files(path=bwtDir, pattern=paste0("^[[:print:]]*",r2tag,"[[:print:]]*\\.mapstat$"), full.names=TRUE)
+# 2022-07-27
+allmapstat_r1 <- list.files(path=bwtDir, pattern=paste0(sampleName,r1tag,".mapstat"), full.names=TRUE)
+allmapstat_r2 <- list.files(path=bwtDir, pattern=paste0(sampleName,r2tag,".mapstat"), full.names=TRUE)
 stopifnot(length(allmapstat_r1)>0 && length(allmapstat_r2)>0)
 print(allmapstat_r1)
 print(allmapstat_r2)

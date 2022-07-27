@@ -120,7 +120,9 @@ plotHiCStat <- function(mat, xlab="", legend=TRUE){
 ####################################
 
 ## Get HiC stat files for all fastq files of a given sample
-allrsstat <- list.files(path=hicDir, pattern=paste0("^[[:print:]]*\\.RSstat$"), full.names=TRUE)
+# allrsstat <- list.files(path=hicDir, pattern=paste0("^[[:print:]]*\\.RSstat$"), full.names=TRUE)
+# 2022-07-27
+allrsstat <- list.files(path=hicDir, pattern=paste0(sampleName, ".merged_sortn.bwt2pairs.RSstat"), full.names=TRUE)
 print(hicDir)
 print(allrsstat)
 stopifnot(length(allrsstat)>0)

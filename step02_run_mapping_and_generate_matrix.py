@@ -84,6 +84,12 @@ rule all:
         expand("../valid_pairs/{sample}.rm_dup_pairs.allValidPairs", sample=SAMPLES),
         expand("../matrix/{bin_size}/{sample}_{bin_size}_raw.matrix", sample=SAMPLES, bin_size=BIN_SIZES),
         expand("../matrix/{bin_size}/{sample}_{bin_size}_iced.matrix", sample=SAMPLES, bin_size=BIN_SIZES),
+        expand("../bam/{sample}/{sample}_R1.mapstat", sample=SAMPLES),
+        expand("../bam/{sample}/{sample}_R2.mapstat", sample=SAMPLES),
+        expand("../quality_checks/plotMapping_{sample}.pdf", sample=SAMPLES),
+        expand("../quality_checks/plotMappingPairing_{sample}.pdf", sample=SAMPLES),
+        expand("../quality_checks/plotHiCFragment_{sample}.pdf", sample=SAMPLES),
+        expand("../quality_checks/plotHiCContactRanges_{sample}.pdf", sample=SAMPLES),
 # ------------------------------------------------------------------->>>>>>>>>>
 # mapping_global
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -295,11 +301,12 @@ rule sortn_read1_bam:
     output:
         temp("../bam/{sample}/{sample}_R1.merged_sortn.bam")
     params:
-        temp_path="../temp_files/merged_bam_splits_for_sortn/{sample}_R1"
+        temp_path="../temp_files/{sample}/{sample}_R1"
     log:
         "../bam/{sample}/{sample}_R1.merged_sortn.log"
     shell:
         """
+        mkdir -p {params.temp_path}
         echo "[DEBUG] start samtools sort -n" > {log}
         {SAMTOOLS} sort -@ {THREAD} {SORT_RAM_PER_THREAD} -n -T {params.temp_path} -o {output} {input} >> {log} 2>&1
         echo "[DEBUG] samtools sort -n done" >> {log}
@@ -310,11 +317,12 @@ rule sortn_read2_bam:
     output:
         temp("../bam/{sample}/{sample}_R2.merged_sortn.bam")
     params:
-        temp_path="../temp_files/merged_bam_splits_for_sortn/{sample}_R2"
+        temp_path="../temp_files/{sample}/{sample}_R2"
     log:
         "../bam/{sample}/{sample}_R2.merged_sortn.log"
     shell:
         """
+        mkdir -p {params.temp_path}
         echo "[DEBUG] start samtools sort -n" > {log}
         {SAMTOOLS} sort -@ {THREAD} {SORT_RAM_PER_THREAD} -n -T {params.temp_path} -o {output} {input} >> {log} 2>&1
         echo "[DEBUG] samtools sort -n done" >> {log}
@@ -362,6 +370,7 @@ rule form_valid_pairs:
     shell:
         """
         echo "[DEBUG] start forming validPairs" > {log}
+        echo "[DEBUG] attention！！！[E::idx_find_and_load] is fine because of sorting name method" >> {log}
         python program/HiC-Pro_3.1.0/scripts/mapped_2hic_dnase.py -v -a -r {input} -o {params.out_path} >> {log} 2>&1
         echo "[DEBUG] forming validPairs done" >> {log}
         """
@@ -444,3 +453,123 @@ rule ice_justify:
             {input} >> {log} 2>&1
         echo "[DEBUG] ice justification at {params.bin_size} resolution done" >> {log}
         """
+# ------------------------------------------------------------------->>>>>>>>>>
+# form mapstat
+# ------------------------------------------------------------------->>>>>>>>>>
+rule form_mapstat:
+    input:
+        bam_f="../bam/{sample}/{sample}_R1.merged_sortn.bam",
+        bam_r="../bam/{sample}/{sample}_R2.merged_sortn.bam",
+        bam_gf="../bam/{sample}/{sample}_R1.bwt2glob.bam",
+        bam_gr="../bam/{sample}/{sample}_R2.bwt2glob.bam",
+        bam_lf="../bam/{sample}/{sample}_R1.unmap_bwt2loc.bam",
+        bam_lr="../bam/{sample}/{sample}_R2.unmap_bwt2loc.bam"
+    output:
+        mapstat_f="../bam/{sample}/{sample}_R1.mapstat",
+        mapstat_r="../bam/{sample}/{sample}_R2.mapstat"
+    log:
+        f="../bam/{sample}/{sample}_R1.map_count.log",
+        r="../bam/{sample}/{sample}_R2.map_count.log",
+    shell:
+        """
+        echo "[DEBUG] start formming mapstat" > {log.f}
+        
+        TOTAL_R1=`{SAMTOOLS} view -c {input.bam_f}`
+        MAPPED_R1=`{SAMTOOLS} view -c -F 4 {input.bam_f}`
+        GLOBAL_R1=`{SAMTOOLS} view -c -F 4 {input.bam_gf}`
+        LOCAL_R1=`{SAMTOOLS} view -c -F 4 {input.bam_lf}`
+        echo "total_R1\t" $TOTAL_R1 >> {output.mapstat_f}
+        echo "mapped_R1\t" $MAPPED_R1 >> {output.mapstat_f}
+        echo "global_R1\t" $GLOBAL_R1 >> {output.mapstat_f}
+        echo "local_R1\t" $LOCAL_R1 >> {output.mapstat_f}
+        
+        echo "[DEBUG] formming mapstat done" >> {log.f}
+        
+        echo "[DEBUG] start formming mapstat" > {log.r}
+        
+        TOTAL_R2=`{SAMTOOLS} view -c {input.bam_r}`
+        MAPPED_R2=`{SAMTOOLS} view -c -F 4 {input.bam_r}`
+        GLOBAL_R2=`{SAMTOOLS} view -c -F 4 {input.bam_gr}`
+        LOCAL_R2=`{SAMTOOLS} view -c -F 4 {input.bam_lr}`
+        echo "total_R2\t" $TOTAL_R2 >> {output.mapstat_r}
+        echo "mapped_R2\t" $MAPPED_R2 >> {output.mapstat_r}
+        echo "global_R2\t" $GLOBAL_R2 >> {output.mapstat_r}
+        echo "local_R2\t" $LOCAL_R2 >> {output.mapstat_r}
+        
+        echo "[DEBUG] formming mapstat done" >> {log.r}
+        """
+rule form_all_valid_pairs_mergestat:
+    input:
+        vp="../valid_pairs/{sample}.merged_sortn.bwt2pairs.validPairs",
+        vp_rmdup="../valid_pairs/{sample}.rm_dup_pairs.allValidPairs"
+    output:
+        "../valid_pairs/{sample}.rm_dup_pairs.allValidPairs.mergestat"
+    params:
+        awk_begion=r"""{cis=0;trans=0;sr=0;lr=0}""",
+        awk_begion2=r"""{cis=cis+1; d=$6>$3?$6-$3:$3-$6; if (d<=20000){sr=sr+1}else{lr=lr+1}}""",
+        awk_begion3=r"""{trans=trans+1}""",
+        awk_end=r"""{print "trans_interaction\t"trans"\ncis_interaction\t"cis"\ncis_shortRange\t"sr"\ncis_longRange\t"lr}"""
+    shell:
+        """
+        allcount=$(cat {input.vp} | wc -l)
+        allcount_rmdup=$(cat {input.vp_rmdup} | wc -l)
+        echo -e "valid_interaction\t"$allcount > {output}
+        echo -e "valid_interaction_rmdup\t"$allcount_rmdup >> {output}
+        awk 'BEGIN{params.awk_begion} $2 == $5{params.awk_begion2} $2!=$5{params.awk_begion3}END{params.awk_end}' {input} >> {output}
+        """
+rule quality_checks:
+    input:
+        mapstat_f="../bam/{sample}/{sample}_R1.mapstat",
+        mapstat_r="../bam/{sample}/{sample}_R2.mapstat",
+        mergestat="../valid_pairs/{sample}.rm_dup_pairs.allValidPairs.mergestat"
+    output:
+        "../quality_checks/plotMapping_{sample}.pdf",
+        "../quality_checks/plotMappingPairing_{sample}.pdf",
+        "../quality_checks/plotHiCFragment_{sample}.pdf",
+        "../quality_checks/plotHiCContactRanges_{sample}.pdf",
+    params:
+        pic_dir="../quality_checks/",
+        bwt_dir="../bam/{sample}/",
+        hic_dir="../valid_pairs/",
+        sample_name="{sample}"
+    log:
+        plotMapping="../quality_checks/plotMapping_{sample}.log",
+        plotMappingPairing="../quality_checks/plotMappingPairing_{sample}.log",
+        plotHiCFragment="../quality_checks/plotHiCFragment_{sample}.log",
+        plotHiCContactRanges="../quality_checks/plotHiCContactRanges_{sample}.log"
+    shell:
+        """
+        mkdir -p {params.pic_dir}
+        
+        # plotMapping
+        echo "[DEBUG] start Quality checks - Mapping results ..." > {log.plotMapping}
+        R CMD BATCH --no-save --no-restore \
+            "--args picDir='{params.pic_dir}' bwtDir='{params.bwt_dir}' sampleName='{params.sample_name}' r1tag='_R1' r2tag='_R2'" \
+            program/HiC-Pro_3.1.0/scripts/plot_mapping_portion.R {log.plotMapping}
+        echo "[DEBUG] Quality checks - Mapping results done" >> {log.plotMapping}
+        
+        echo "[DEBUG] start Quality checks - Pairing results ..." > {log.plotMappingPairing}
+        R CMD BATCH --no-save --no-restore \
+            "--args picDir='{params.pic_dir}' bwtDir='{params.bwt_dir}' sampleName='{params.sample_name}' rmMulti='1' rmSingle='1'" \
+            program/HiC-Pro_3.1.0/scripts/plot_pairing_portion.R {log.plotMappingPairing}
+        echo "[DEBUG] Quality checks - Pairing results done" >> {log.plotMappingPairing}
+        
+        # plotHiCFragment [RSstat file]
+        echo "[DEBUG] start Quality checks - Hi-C processing ..." > {log.plotHiCFragment}
+        R CMD BATCH --no-save --no-restore \
+            "--args picDir='{params.pic_dir}' hicDir='{params.hic_dir}' sampleName='{params.sample_name}'" \
+            program/HiC-Pro_3.1.0/scripts/plot_hic_fragment.R {log.plotHiCFragment}
+        echo "[DEBUG] Quality checks - Hi-C processing done" >> {log.plotHiCFragment}
+        
+        # plotHiCContactRanges
+        echo "[DEBUG] start Quality checks - Hi-C contact maps ..." > {log.plotHiCContactRanges}
+        R CMD BATCH --no-save --no-restore \
+            "--args picDir='{params.pic_dir}' hicDir='{params.hic_dir}' sampleName='{params.sample_name}'" \
+            program/HiC-Pro_3.1.0/scripts/plot_hic_contacts.R {log.plotHiCContactRanges}
+        echo "[DEBUG] Quality checks - Hi-C contact maps done" >> {log.plotHiCContactRanges}
+        """
+    
+
+
+
+

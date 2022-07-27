@@ -115,7 +115,10 @@ gp
 ####################################
 
 ## Get HiC stat files for all fastq files of a given sample
-mergestat <- list.files(path=statsDir, pattern=paste0("^[[:print:]]*\\.mergestat$"), full.names=TRUE)
+# mergestat <- list.files(path=statsDir, pattern=paste0("^[[:print:]]*\\.mergestat$"), full.names=TRUE)
+# 2022-07-27
+mergestat <- list.files(path=hicDir, pattern=paste0(sampleName, ".rm_dup_pairs.allValidPairs.mergestat"), full.names=TRUE)
+
 print(mergestat)
 stopifnot(length(mergestat)>0)
 
