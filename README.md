@@ -59,3 +59,4 @@ snakemake -pr -j 8 -s step02_run_mapping_and_generate_matrix.py -n
 ![](https://tva1.sinaimg.cn/large/e6c9d24ely1h4lrr7zxxyj20kc0my0wt.jpg)
 
 ### step 2
+test
