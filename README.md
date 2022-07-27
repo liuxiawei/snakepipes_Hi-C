@@ -1,6 +1,8 @@
 # snakepipes_Hi-C
 **须知**：本仓库还在构建中，暂时只作参考！！
 
+参考和引用了一些[HiC Pro](https://github.com/nservant/HiC-Pro)的代码
+
 ---
 ## 环境
 ```shell
