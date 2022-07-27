@@ -50,13 +50,13 @@ snakemake -pr -j 8 -s step02_run_mapping_and_generate_matrix.py -n
 # ├── temp_files
 # └── valid_pairs
 ```
-![](https://tva1.sinaimg.cn/large/e6c9d24ely1h4lrqeisrlj20kv0cogng.jpg)
+<!-- ![](https://tva1.sinaimg.cn/large/e6c9d24ely1h4lrqeisrlj20kv0cogng.jpg)
 
 ![](https://tva1.sinaimg.cn/large/e6c9d24ely1h4lrq238cij20kc0onjvm.jpg)
 
 ![](https://tva1.sinaimg.cn/large/e6c9d24ely1h4lrqxfl53j20kn0n1juq.jpg)
 
-![](https://tva1.sinaimg.cn/large/e6c9d24ely1h4lrr7zxxyj20kc0my0wt.jpg)
+![](https://tva1.sinaimg.cn/large/e6c9d24ely1h4lrr7zxxyj20kc0my0wt.jpg) -->
 
 ### step 2
 test
