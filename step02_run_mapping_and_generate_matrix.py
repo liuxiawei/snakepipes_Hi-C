@@ -68,9 +68,12 @@ BOWTIE2_INDEX = dt["bowtie2_index"]
 assert check_cmd("bowtie2")  # Bowtie 2 version 2.4.5
 assert check_cmd("samtools")  # samtools 1.15.1 Using htslib 1.15.1
 assert check_cmd("java")  # openjdk version 1.8.0_312
-assert check_cmd("hicBuildMatrix") # hicexplorer=3.7.2
-assert check_cmd("hicCorrectMatrix") # hicexplorer=3.7.2
-assert check_cmd("hicConvertFormat") # hicexplorer=3.7.2
+# hicexplorer=3.7.2
+assert check_cmd("hicBuildMatrix") 
+assert check_cmd("hicCorrectMatrix") 
+assert check_cmd("hicConvertFormat") 
+assert check_cmd("hicFindTADs") 
+
 # pip install iced                           
 # Collecting iced
 #   Downloading iced-0.5.10.tar.gz (2.3 MB)
@@ -81,6 +84,7 @@ JAVA = "java"
 hicBuildMatrix = "hicBuildMatrix"
 hicCorrectMatrix = "hicCorrectMatrix"
 hicConvertFormat = "hicConvertFormat"
+hicFindTADs = "hicFindTADs"
 
 
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -103,6 +107,8 @@ rule all:
         expand("../hic_file/{sample}.rm_dup_pairs.allValidPairs.hic", sample=SAMPLES),
         expand("../matrix/{bin_size}/{sample}_{bin_size}_RawMatrix.h5", sample=SAMPLES, bin_size=BIN_SIZES),
         expand("../matrix/{bin_size}/{sample}_{bin_size}_KRjustify_Matrix.h5", sample=SAMPLES, bin_size=BIN_SIZES),
+        # expand("../calling_use_hdf5/{bin_size}/{sample}_zscore_matrix.h5", sample=SAMPLES, bin_size=BIN_SIZES),
+        
 # ------------------------------------------------------------------->>>>>>>>>>
 # mapping_global
 # ------------------------------------------------------------------->>>>>>>>>>
@@ -122,12 +128,14 @@ rule map_read1_global:
     shell:
         """
         INPUT={input}
-        [[ "{input}" =~ .*SE.fastq.gz$ ]] &&
-        # if true
-        echo "[FATAL] find SE reads, raw reads should be PE reads in Hi-C protocol!" > {log} 2>&1 ||
-        # if false
-        echo "[DEBUG] find PE reads, go on mapping!" > {log} 2>&1
-        {BOWTIE2} {BOWTIE2_GLOBAL_OPTIONS} --un {output.un} --rg-id BMG --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {params.R1} -S {output.sam} >> {log} 2>&1
+        if [[ $INPUT =~ .*SE.fastq.gz$ ]]; then 
+            echo "[FATAL] find SE reads, raw reads should be PE reads in Hi-C protocol" > {log}
+        elif [[ $INPUT =~ .*R1.fastq.gz$ ]]; then
+            echo "[DEBUG] find PE reads, go on mapping" > {log}
+            {BOWTIE2} {BOWTIE2_GLOBAL_OPTIONS} --un {output.un} --rg-id BMG --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {params.R1} -S {output.sam} >> {log} 2>&1
+        else
+            echo "[FATAL] fastq should be *.SE.fastq.gz or *.R[1,2].fastq.gz" > {log}
+        fi
         echo "[DEBUG] bowtie2 mapping done" >> {log}
         """
 rule map_read2_global:
@@ -146,12 +154,14 @@ rule map_read2_global:
     shell:
         """
         INPUT={input}
-        [[ "{input}" =~ .*SE.fastq.gz$ ]] &&
-        # if true
-        echo "[FATAL] find SE reads, raw reads should be PE reads in Hi-C protocol!" > {log} 2>&1 ||
-        # if false
-        echo "[DEBUG] find PE reads, go on mapping!" > {log} 2>&1
-        {BOWTIE2} {BOWTIE2_GLOBAL_OPTIONS} --un {output.un} --rg-id BMG --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {params.R2} -S {output.sam} >> {log} 2>&1
+        if [[ $INPUT =~ .*SE.fastq.gz$ ]]; then 
+            echo "[FATAL] find SE reads, raw reads should be PE reads in Hi-C protocol" > {log}
+        elif [[ $INPUT =~ .*R1.fastq.gz$ ]]; then
+            echo "[DEBUG] find PE reads, go on mapping" > {log}
+            {BOWTIE2} {BOWTIE2_GLOBAL_OPTIONS} --un {output.un} --rg-id BMG --rg {params.RG} -p {THREAD} -x {BOWTIE2_INDEX} -U {params.R2} -S {output.sam} >> {log} 2>&1
+        else
+            echo "[FATAL] fastq should be *.SE.fastq.gz or *.R[1,2].fastq.gz" > {log}
+        fi
         echo "[DEBUG] bowtie2 mapping done" >> {log}
         """
 rule sam2bam_read1_global:
@@ -735,13 +745,27 @@ rule hdf5_matrix_correction:
             -o {output} >> {log} 2>&1
         echo "[DEBUG] justify matrix done" >> {log}
         """
-# call TAD
-# srun -T 24 hicFindTADs \
-# -m 293T_WT.KR.CorrectMatrix.25Kbp.h5 \
-# --outPrefix 293T_WT.KR.25Kbp \
-# --numberOfProcessors 24 \
-# --correctForMultipleTesting fdr > 293T_WT.hicFindTADs.25Kbp.log 2>&1 &  
-
+rule calling_use_hdf5:
+    input:
+        "../matrix/{bin_size}/{sample}_{bin_size}_KRjustify_Matrix.h5"
+    output:
+        "../calling_use_hdf5/{bin_size}/{sample}_zscore_matrix.h5"
+    params:
+        out_dir="../calling_use_hdf5/{bin_size}/{sample}"
+    log:
+        "../calling_use_hdf5/{bin_size}/{sample}.log"
+    shell:
+        # 内存开销非常大！！
+        """
+        echo "[DEBUG] start to calling ..." > {log}
+        export HDF5_USE_FILE_LOCKING='FALSE' # for [locking disabled on this file system] err
+        {hicFindTADs} \
+            -m {input} \
+            --outPrefix {params.out_dir} \
+            --numberOfProcessors {THREAD} \
+            --correctForMultipleTesting fdr >> {log} 2>&1
+        echo "[DEBUG] calling done" >> {log}
+        """
 # # plot 
 # hicPlotTADs --tracks 20211101-DdCBE_plot_TAD.ini -o out_image/test.pdf --region chrX:60000000-80000000 &
 # hicPlotTADs --tracks 20211101-DdCBE_plot_TAD.ini -o out_image/test_2.pdf --region chrX:60000000-80000000 &
@@ -749,8 +773,6 @@ rule hdf5_matrix_correction:
 
 
 # call loops 
-# cd /home/menghaowei/menghw_HD/DdCBE_project/10.hic_data/01.hicpro_WT/hic_results/data/293T_WT
-
 # java -Xmx32g -jar /home/menghaowei/menghw_HD/software_package/juicer/juicer_tools_1.22.01.jar hiccups \
 # --threads 10 \
 # -r 25000,10000,5000 \
